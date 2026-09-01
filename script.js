@@ -35,19 +35,43 @@
     });
   }
 
-  // Escapar caracteres especiales
+  // CORRECCIÓN S6864: String.raw tanto en búsquedas como en reemplazos
   function esc(value) {
     return String(value ?? '')
-      .replace(/\\/g, '\\\\')
-      .replace(/\r?\n/g, '\\n')
-      .replace(/;/g, '\\;')
-      .replace(/,/g, '\\,');
+      .replace(String.raw`\\`, String.raw`\\`)
+      .replace(String.raw`\r?\n`, String.raw`\n`)
+      .replace(String.raw`\;`, String.raw`\;`)
+      .replace(String.raw`\,`, String.raw`\,`);
   }
 
-  // Generar vCard con FOTO incluida (CORREGIDO)
-  function makeVCard() {
-    // Construir la URL absoluta de la foto (funciona en GitHub Pages)
-    const photoUrl = new URL('foto.png', window.location.href).href;
+  // Convertir la imagen a Base64 para que el teléfono guarde la foto siempre
+  async function getPhotoBase64() {
+    try {
+      const response = await fetch('foto.png');
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error('Error cargando la foto:', e);
+      return null;
+    }
+  }
+
+  // Generar vCard (asíncrono)
+  async function makeVCard() {
+    const photoBase64 = await getPhotoBase64();
+    
+    let photoLine = '';
+    if (photoBase64) {
+      const base64Data = photoBase64.split(',')[1];
+      photoLine = 'PHOTO;ENCODING=b;TYPE=PNG:' + base64Data;
+    } else {
+      photoLine = 'PHOTO;VALUE=URI;TYPE=PNG:' + new URL('foto.png', window.location.href).href;
+    }
 
     const lines = [
       'BEGIN:VCARD',
@@ -58,8 +82,9 @@
       CONTACT.phone ? 'TEL;TYPE=CELL:' + esc(CONTACT.phone) : '',
       CONTACT.email ? 'EMAIL;TYPE=INTERNET:' + esc(CONTACT.email) : '',
       CONTACT.linkedin ? 'URL;TYPE=LinkedIn:' + esc(CONTACT.linkedin) : '',
-      CONTACT.birthday ? 'BDAY:' + CONTACT.birthday.replace(/-/g, '') : '',
-      'PHOTO;VALUE=URI;TYPE=PNG:' + photoUrl, // <--- AÑADIDO PARA LA FOTO
+      // CORRECCIÓN S7781: replaceAll en lugar de replace con /g
+      CONTACT.birthday ? 'BDAY:' + CONTACT.birthday.replaceAll('-', '') : '', 
+      photoLine,
       'END:VCARD'
     ].filter(Boolean);
     return lines.join('\r\n') + '\r\n';
@@ -67,10 +92,10 @@
 
   // Guardar contacto (multi-fallback)
   async function handleSave() {
-    const vcardString = makeVCard();
+    const vcardString = await makeVCard();
     const blob = new Blob([vcardString], { type: 'text/vcard;charset=utf-8' });
 
-    // 1. Compartir archivo nativo (iOS, Android moderno)
+    // 1. Compartir archivo nativo
     if (navigator.share && navigator.canShare) {
       try {
         const file = new File([blob], 'Santiago-F-Cadena.vcf', { type: 'text/vcard' });
@@ -81,7 +106,7 @@
       } catch (err) { console.log('Share cancelado o falló:', err); }
     }
 
-    // 2. Descarga directa con Blob URL (escritorio, algunos Android)
+    // 2. Descarga directa
     try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -89,19 +114,20 @@
       a.download = 'Santiago-F-Cadena.vcf';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      // CORRECCIÓN S7762: Usar remove() en lugar de removeChild
+      a.remove(); 
       URL.revokeObjectURL(url);
       return;
     } catch (e) { console.error('Descarga Blob falló:', e); }
 
-    // 3. Abrir data URI (puede funcionar en Redmi)
+    // 3. Abrir data URI
     try {
       const dataUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcardString);
       window.open(dataUri, '_blank');
       return;
     } catch (e) { console.error('Abrir data URI falló:', e); }
 
-    // 4. Último recurso: mostrar contenido
+    // 4. Último recurso
     alert('Tu navegador no permite guardar automáticamente.\nCopia el siguiente texto y guárdalo como archivo .vcf:\n\n' + vcardString);
   }
 
