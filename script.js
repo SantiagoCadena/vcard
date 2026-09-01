@@ -10,7 +10,7 @@
     phone: '+593987285574',
     email: 'santicadena@hotmail.com',
     linkedin: 'https://www.linkedin.com/in/santiago-cadena-4847b012b',
-    website: '',
+    website: '', // (opcional, podrías añadir aquí otra web si quieres)
     birthday: '1977-01-05'
   };
 
@@ -35,7 +35,7 @@
     });
   }
 
-  // CORRECCIÓN S6864: String.raw tanto en búsquedas como en reemplazos
+  // Escapado correcto (String.raw)
   function esc(value) {
     return String(value ?? '')
       .replace(String.raw`\\`, String.raw`\\`)
@@ -44,7 +44,7 @@
       .replace(String.raw`\,`, String.raw`\,`);
   }
 
-  // Convertir la imagen a Base64 para que el teléfono guarde la foto siempre
+  // Convertir foto a Base64
   async function getPhotoBase64() {
     try {
       const response = await fetch('foto.png');
@@ -61,7 +61,7 @@
     }
   }
 
-  // Generar vCard (asíncrono)
+  // Generar vCard con foto
   async function makeVCard() {
     const photoBase64 = await getPhotoBase64();
     
@@ -81,21 +81,21 @@
       CONTACT.title ? 'TITLE:' + esc(CONTACT.title) : '',
       CONTACT.phone ? 'TEL;TYPE=CELL:' + esc(CONTACT.phone) : '',
       CONTACT.email ? 'EMAIL;TYPE=INTERNET:' + esc(CONTACT.email) : '',
-      CONTACT.linkedin ? 'URL;TYPE=LinkedIn:' + esc(CONTACT.linkedin) : '',
-      // CORRECCIÓN S7781: replaceAll en lugar de replace con /g
-      CONTACT.birthday ? 'BDAY:' + CONTACT.birthday.replaceAll('-', '') : '', 
+      'URL;TYPE=LinkedIn:' + esc(CONTACT.linkedin), // LinkedIn
+      // ✅ NUEVO CAMPO: Añadir la URL de la tarjeta digital
+      'URL;TYPE=WORK:' + pageUrl,                    // Tu página web
+      CONTACT.birthday ? 'BDAY:' + CONTACT.birthday.replaceAll('-', '') : '',
       photoLine,
       'END:VCARD'
     ].filter(Boolean);
     return lines.join('\r\n') + '\r\n';
   }
 
-  // Guardar contacto (multi-fallback)
+  // Guardar contacto
   async function handleSave() {
     const vcardString = await makeVCard();
     const blob = new Blob([vcardString], { type: 'text/vcard;charset=utf-8' });
 
-    // 1. Compartir archivo nativo
     if (navigator.share && navigator.canShare) {
       try {
         const file = new File([blob], 'Santiago-F-Cadena.vcf', { type: 'text/vcard' });
@@ -106,7 +106,6 @@
       } catch (err) { console.log('Share cancelado o falló:', err); }
     }
 
-    // 2. Descarga directa
     try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -114,20 +113,17 @@
       a.download = 'Santiago-F-Cadena.vcf';
       document.body.appendChild(a);
       a.click();
-      // CORRECCIÓN S7762: Usar remove() en lugar de removeChild
-      a.remove(); 
+      a.remove(); // SonarQube S7762
       URL.revokeObjectURL(url);
       return;
     } catch (e) { console.error('Descarga Blob falló:', e); }
 
-    // 3. Abrir data URI
     try {
       const dataUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcardString);
       window.open(dataUri, '_blank');
       return;
     } catch (e) { console.error('Abrir data URI falló:', e); }
 
-    // 4. Último recurso
     alert('Tu navegador no permite guardar automáticamente.\nCopia el siguiente texto y guárdalo como archivo .vcf:\n\n' + vcardString);
   }
 
@@ -145,10 +141,8 @@
     }
   }
 
-  // Eventos
   saveBtn.addEventListener('click', handleSave);
   shareBtn.addEventListener('click', handleShare);
 
-  // Inicializar
   renderQR();
 })();
