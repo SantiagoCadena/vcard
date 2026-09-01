@@ -1,6 +1,6 @@
 /**
  * Digital Contact Card - Logic
- * Handles QR generation, vCard creation, and Share/Download fallbacks.
+ * Robust handling of vCard saving with multiple fallbacks.
  */
 (function () {
   'use strict';
@@ -16,7 +16,7 @@
     email: 'santicadena@hotmail.com',
     linkedin: 'https://www.linkedin.com/in/santiago-cadena-4847b012b',
     website: '',
-    birthday: '1977-01-05' // Included in vCard only
+    birthday: '1977-01-05'
   };
 
   // Cache DOM elements
@@ -30,7 +30,6 @@
    */
   function renderQR() {
     if (typeof QRCode === 'undefined') {
-      // Fallback: If CDN library fails, use external API
       const img = document.createElement('img');
       img.alt = 'Código QR de esta tarjeta';
       img.width = 200;
@@ -39,7 +38,6 @@
       qrTarget.appendChild(img);
       return;
     }
-
     try {
       QRCode.toCanvas(pageUrl, {
         width: 200,
@@ -60,8 +58,6 @@
 
   /**
    * Escapes characters for vCard 3.0 compliance (RFC 2426).
-   * @param {string} value
-   * @returns {string}
    */
   function esc(value) {
     return String(value ?? '')
@@ -73,7 +69,6 @@
 
   /**
    * Builds a valid vCard 3.0 string.
-   * @returns {string}
    */
   function makeVCard() {
     const lines = [
@@ -94,37 +89,74 @@
   }
 
   /**
-   * Handles the "Save" action.
-   * Native Share for mobile (iOS/Android) or forced download for desktop.
+   * Attempts to download the vCard using a hidden anchor element.
+   * Works on desktop browsers and some Android browsers.
    */
-  function handleSave() {
-    const vcard = makeVCard();
-    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-    const file = new File([blob], 'Santiago-F-Cadena.vcf', { type: 'text/vcard' });
-
-    // Check if device supports native share of files (iOS/Android)
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({
-        files: [file],
-        title: CONTACT.fullName,
-        text: 'Guarda mi contacto'
-      }).catch(err => console.log('Share cancelled:', err));
-    } else {
-      // Fallback: Standard download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'Santiago-F-Cadena.vcf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+  function downloadVCard(vcardString) {
+    const blob = new Blob([vcardString], { type: 'text/vcard;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Santiago-F-Cadena.vcf';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }
+    }, 100);
   }
 
   /**
-   * Handles the "Share" action.
-   * Native share for mobile/desktop, or clipboard copy fallback.
+   * Opens the vCard as a data URI in a new tab/window.
+   * This is the fallback for iOS Safari, where downloads are blocked
+   * but opening a vCard file triggers the "Add to Contacts" prompt.
+   */
+  function openVCardInNewTab(vcardString) {
+    const dataUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcardString);
+    window.open(dataUri, '_blank');
+  }
+
+  /**
+   * Main handler for the "Añadir Contacto" button.
+   * Tries: 1) Native share with file (iOS/Android) -> 2) Direct download -> 3) Open in new tab.
+   */
+  async function handleSave() {
+    const vcardString = makeVCard();
+    const blob = new Blob([vcardString], { type: 'text/vcard;charset=utf-8' });
+
+    // Intento 1: Compartir archivo nativo (mejor experiencia en móviles)
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], 'Santiago-F-Cadena.vcf', { type: 'text/vcard' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: CONTACT.fullName,
+            text: 'Añade este contacto'
+          });
+          return; // Si se compartió, no hacer nada más
+        }
+      } catch (err) {
+        console.log('Share failed or cancelled:', err);
+        // Si el usuario cancela o falla, continuar al siguiente método
+      }
+    }
+
+    // Intento 2: Descarga directa (funciona en escritorio y algunos Android)
+    try {
+      downloadVCard(vcardString);
+      return;
+    } catch (e) {
+      console.error('Download failed:', e);
+    }
+
+    // Intento 3: Abrir en nueva pestaña (fallback iOS)
+    openVCardInNewTab(vcardString);
+  }
+
+  /**
+   * Handles the "Share" action (compartir tarjeta completa).
    */
   async function handleShare() {
     if (navigator.share) {
@@ -138,14 +170,14 @@
         console.log('Share cancelled:', err);
       }
     } else {
-      // Fallback: Copy link to clipboard
-      if (navigator.clipboard) {
-        try {
+      // Fallback: Copiar enlace al portapapeles
+      try {
+        if (navigator.clipboard) {
           await navigator.clipboard.writeText(pageUrl);
           alert('¡Enlace copiado al portapapeles!');
-        } catch (err) {
-          console.error('Clipboard error:', err);
         }
+      } catch (err) {
+        console.error('Clipboard error:', err);
       }
     }
   }
