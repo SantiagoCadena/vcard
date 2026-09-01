@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Santiago F. Cadena M. — Digital Contact Card</title>
+  <meta name="description" content="Digital vCard for Santiago F. Cadena M., Software Developer.">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Santiago F. Cadena M. — Contact">
+  <meta property="og:description" content="Software Developer · Digital Contact Card">
+  <meta property="og:type" content="profile">
+
+  <!-- Performance: Preconnect & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- External Libraries (Deferred to not block parsing) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+  <!-- Internal Script -->
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="card" role="main" aria-label="Tarjeta de contacto digital">
+
+    <div class="avatar-wrap">
+      <!-- Asegúrate de que foto.png esté en la misma carpeta -->
+      <img src="foto.png" alt="Foto de Santiago F. Cadena M." loading="eager" decoding="async">
+    </div>
+
+    <div class="identity">
+      <span class="badge">Digital Contact</span>
+      <h1>Santiago F. Cadena M.</h1>
+      <p class="role">Software Developer</p>
+    </div>
+
+    <nav class="actions" aria-label="Acciones rápidas">
+      <a class="action-btn" href="tel:+593987285574" aria-label="Llamar por teléfono">
+        <span class="ico" aria-hidden="true">📞</span>
+        <span>Llamar</span>
+      </a>
+      <a class="action-btn" href="https://wa.me/593987285574" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp">
+        <span class="ico" aria-hidden="true">💬</span>
+        <span>WhatsApp</span>
+      </a>
+      <a class="action-btn" href="mailto:santicadena@hotmail.com" aria-label="Enviar correo electrónico">
+        <span class="ico" aria-hidden="true">✉️</span>
+        <span>Email</span>
+      </a>
+      <a class="action-btn" href="https://www.linkedin.com/in/santiago-cadena-4847b012b" target="_blank" rel="noopener noreferrer" aria-label="Ver perfil de LinkedIn">
+        <span class="ico" aria-hidden="true">🔗</span>
+        <span>LinkedIn</span>
+      </a>
+    </nav>
+
+    <hr class="divider">
+
+    <section class="details" aria-label="Información de contacto detallada">
+      <div class="detail-row">
+        <span class="icon" aria-hidden="true">📱</span>
+        <div class="content">
+          <span class="label">Teléfono</span>
+          <a href="tel:+593987285574">+593 98 728 5574</a>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="icon" aria-hidden="true">✉️</span>
+        <div class="content">
+          <span class="label">Correo</span>
+          <a href="mailto:santicadena@hotmail.com">santicadena@hotmail.com</a>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="icon" aria-hidden="true">🔗</span>
+        <div class="content">
+          <span class="label">LinkedIn</span>
+          <a href="https://www.linkedin.com/in/santiago-cadena-4847b012b" target="_blank" rel="noopener noreferrer">linkedin.com/in/santiago-cadena-4847b012b</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="button-group">
+      <button class="save-btn" id="saveBtn" type="button">
+        <span aria-hidden="true">💾</span>
+        Guardar
+      </button>
+      <button class="save-btn share-btn" id="shareBtn" type="button">
+        <span aria-hidden="true">📤</span>
+        Compartir
+      </button>
+    </div>
+
+    <div class="qr-wrap" id="qrContainer" aria-live="polite">
+      <div id="qrTarget"></div>
+      <p class="qr-hint">Escanea para abrir esta tarjeta en cualquier dispositivo</p>
+    </div>
+
+    <footer class="footer">
+      <a href="https://www.linkedin.com/in/santiago-cadena-4847b012b" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
+        © Santiago F. Cadena M. · Software Developer
+      </a>
+    </footer>
+
+  </main>
+</body>
+</html>
